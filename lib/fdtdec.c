@@ -1073,6 +1073,7 @@ int fdtdec_setup_memory_banksize(void)
 {
 	int bank, ret, reg = 0;
 	struct resource res;
+	bool autosize = false;
 	ofnode mem = ofnode_null();
 
 	mem = get_next_memory_node(mem);
@@ -1100,6 +1101,26 @@ int fdtdec_setup_memory_banksize(void)
 		gd->bd->bi_dram[bank].start = (phys_addr_t)res.start;
 		gd->bd->bi_dram[bank].size =
 			(phys_size_t)(res.end - res.start + 1);
+
+			autosize = ofnode_read_bool(mem, "auto-size");
+			if(autosize){
+				u64 new_size;
+				u64 start = gd->bd->bi_dram[bank].start;
+				u64 size = gd->bd->bi_dram[bank].size;
+
+
+				debug("Auto-sizing %llx, size %llx: ", start, size);
+				new_size = get_ram_size((long *)(uintptr_t)start, size);
+				if (new_size == size) {
+					debug("OK\n");
+					printf("OK\n");
+				} else {
+					debug("sized to %llx\n", new_size);
+
+					size = new_size;
+					gd->bd->bi_dram[bank].size = size;
+				}
+			}
 
 		debug("%s: DRAM Bank #%d: start = 0x%llx, size = 0x%llx\n",
 		      __func__, bank,
